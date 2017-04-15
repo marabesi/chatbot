@@ -1,14 +1,20 @@
 "use strict"
 
+require('dotenv').config();
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+const request = require('request');
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
-app.get('/webhook', (req, res) => {
+app.get('/', (req, res) => {
+  console.log(req);
+
   if (req.query['hub.mode'] && req.query['hub.verify_token'] === 'tuxedo_cat') {
     res.status(200).send(req.query['hub.challenge']);
   } else {
@@ -16,7 +22,7 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-app.post('/webhook', (req, res) => {
+app.post('/', (req, res) => {
   console.log(req.body);
   
   if (req.body.object === 'page') {
@@ -36,7 +42,7 @@ function sendMessage(event) {
   let sender = event.sender.id;
   let text = event.message.text;
 
-  consle.log(text);
+  console.log(text);
 
   request({
     url: 'https://graph.facebook.com/v2.6/me/messages',
