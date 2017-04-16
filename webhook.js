@@ -6,11 +6,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
 const request = require('request');
+const apiai = require('apiai');
+const apiaiApp = apiai(process.env.API_AI);
+const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
 app.get('/', (req, res) => {
   console.log(req);
@@ -42,23 +43,35 @@ function sendMessage(event) {
   let sender = event.sender.id;
   let text = event.message.text;
 
-  console.log(text);
+  let apiai = apiaiApp.textRequest(text, {
+      sessionId: 'marabesi_bot'
+    });
 
-  request({
-    url: 'https://graph.facebook.com/v2.6/me/messages',
-    qs: {access_token: PAGE_ACCESS_TOKEN},
-    method: 'POST',
-    json: {
-      recipient: {id: sender},
-      message: {text: text}
-    }
-  }, function (error, response) {
-    if (error) {
-        console.log('Error sending message: ', error);
-    } else if (response.body.error) {
-        console.log('Error: ', response.body.error);
-    }
-  });
+    apiai.on('response', (response) => {
+      let aiText = response.result.fulfillment.speech;
+
+      request({
+        url: 'https://graph.facebook.com/v2.6/me/messages',
+        qs: {access_token: PAGE_ACCESS_TOKEN},
+        method: 'POST',
+        json: {
+          recipient: {id: sender},
+          message: {text: aiText}
+        }
+      }, (error, response) => {
+        if (error) {
+            console.log('Error sending message: ', error);
+        } else if (response.body.error) {
+            console.log('Error: ', response.body.error);
+        }
+      });
+    });
+
+    apiai.on('error', (error) => {
+      console.log(error);
+    });
+
+    apiai.end();
 }
 
 const server = app.listen(process.env.PORT || 5000, () => {
